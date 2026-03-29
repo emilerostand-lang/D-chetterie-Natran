@@ -1,0 +1,314 @@
+!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Carte déchetteries complète</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+    }
+
+    #map {
+      width: 100%;
+      height: 100vh;
+    }
+
+    .menu {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: rgba(255,255,255,0.96);
+      border-radius: 10px;
+      padding: 10px 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+      font-size: 14px;
+      line-height: 1.5;
+      max-width: 220px;
+    }
+
+    .menu h3 {
+      margin: 0 0 6px 0;
+      font-size: 15px;
+    }
+
+    .menu label {
+      display: block;
+      margin: 2px 0;
+    }
+
+    .go-panel {
+      position: absolute;
+      top: 170px;
+      right: 10px;
+      z-index: 1000;
+      background: rgba(255,255,255,0.96);
+      border-radius: 10px;
+      padding: 10px 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+      font-size: 13px;
+      line-height: 1.5;
+      max-width: 220px;
+    }
+
+    .go-panel h3 {
+      margin: 0 0 6px 0;
+      font-size: 15px;
+    }
+
+    .go-panel a {
+      display: block;
+      color: #b91c1c;
+      text-decoration: none;
+      margin: 2px 0;
+      font-weight: 600;
+    }
+
+    .distance-label {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 2px 6px;
+      font-size: 10px;
+      color: #374151;
+      white-space: nowrap;
+    }
+
+    .commune-label {
+      font-size: 11px;
+      color: #111827;
+      white-space: nowrap;
+      text-shadow: 1px 1px 2px white;
+    }
+
+    .site-label {
+      font-size: 12px;
+      font-weight: bold;
+      color: #991b1b;
+      white-space: nowrap;
+      text-shadow: 1px 1px 2px white;
+    }
+
+    .popup-btn {
+      display: inline-block;
+      background: #dc2626;
+      color: white !important;
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 700px) {
+      .menu, .go-panel {
+        max-width: 180px;
+        font-size: 12px;
+      }
+
+      .go-panel {
+        top: 185px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="menu">
+  <h3>Affichage</h3>
+  <label><input type="checkbox" id="toggleCommunes" checked> Communes</label>
+  <label><input type="checkbox" id="toggleSites" checked> Déchetteries</label>
+  <label><input type="checkbox" id="toggleDistances" checked> Distances</label>
+</div>
+
+<div class="go-panel">
+  <h3>🚗 Y aller</h3>
+  <a href="https://www.google.com/maps/dir/?api=1&destination=48.42613,1.4543262" target="_blank">Lucé</a>
+  <a href="https://www.google.com/maps/dir/?api=1&destination=48.7549762,1.3670077" target="_blank">Dreux</a>
+  <a href="https://www.google.com/maps/dir/?api=1&destination=48.478526,1.504156" target="_blank">Champhol</a>
+  <a href="https://www.google.com/maps/dir/?api=1&destination=48.411604,1.454057" target="_blank">Chaunay</a>
+  <a href="https://www.google.com/maps/dir/?api=1&destination=48.2015447,1.4015739" target="_blank">Bonneval</a>
+  <a href="https://www.google.com/maps/dir/?api=1&destination=48.2220827,1.1646355" target="_blank">Brou</a>
+  <a href="https://www.google.com/maps/dir/?api=1&destination=48.2179079,1.3042593" target="_blank">Dangeau</a>
+</div>
+
+<script>
+  const map = L.map('map').setView([48.5, 1.35], 8);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(map);
+
+  const dechetteries = [
+    ["Veolia Lucé (pro)", 48.42613, 1.4543262, "02 55 59 50 00"],
+    ["Dreux (pro)", 48.7549762, 1.3670077, "02 37 42 86 00"],
+    ["Champhol (pro)", 48.478526, 1.504156, "08 00 22 20 36"],
+    ["Chaunay (pro)", 48.411604, 1.454057, "08 00 22 20 36"],
+    ["Bonneval (pro)", 48.2015447, 1.4015739, "02 37 47 46 15"],
+    ["Brou (pro)", 48.2220827, 1.1646355, "02 37 96 06 03"],
+    ["Dangeau végétaux (pro)", 48.2179079, 1.3042593, "06 33 95 18 52"]
+  ];
+
+  const communes = [
+    ["Anet",48.85804,1.45262],
+    ["Ouneau",48.4763105531,1.77034183],
+    ["Belhomert-Guéhouville",48.50279816,1.06642503],
+    ["Bonneval",48.169600775,1.385497276],
+    ["Boulay-Thierry",48.642901,1.4288],
+    ["Boutigny-Prouais",48.728502482,1.55627303],
+    ["Brou",48.219367,1.174051],
+    ["Ceton",48.216711265,0.768189128],
+    ["Champrond-en-Gâtine",48.83955188827,1.082625664],
+    ["Chartres",48.440920902,1.52136721],
+    ["Châteaudun",48.084849814,1.339766065],
+    ["Courville-sur-Eure",48.455200053,1.2311060026],
+    ["Dammarie",48.35470918,1.479043547],
+    ["Donnemain-Saint-Mamès",48.09805,1.35228],
+    ["Faverois-les-Bardes",48.689352851,1.563432882],
+    ["Frétigny",48.35717,0.97844],
+    ["Gas",48.555648,1.668101],
+    ["Goussainville",48.770618789,1.545953681],
+    ["Houx",48.568310026,1.631793044],
+    ["Combray",48.301453,1.232134],
+    ["Jallans",48.079081559,1.374851839],
+    ["Le Theil",48.26793,0.66969],
+    ["Marville-Moutiers-Brûlé",48.673569485,1.380049667],
+    ["Nogent-le-Rotrou",48.315191472,0.842558122],
+    ["Pontgouin",48.477103989,1.186860144],
+    ["Senonches",48.50877,1.23532],
+    ["Saint-Lubin-de-la-Haye",48.815661912,1.537886801],
+    ["Saint-Martin-de-Nigelles",48.618228597,1.621427698],
+    ["Saint-Ouen-Marchefroy",48.85199,1.529993],
+    ["Oisème",48.465078307,1.551186993],
+    ["Saint-Symphorien-le-Château",48.502654,1.761488],
+    ["Thimert-Gâtelles",48.552940900,1.288870056],
+    ["Trizay-Coutretot-Saint-Serge",48.30595,0.88181],
+    ["Vernouillet",48.70973,1.36330],
+    ["Villeau",48.249608004,1.585387245],
+    ["Villemeux-sur-Eure",48.666330792,1.476826510],
+    ["Vitray-en-Beauce",48.287858210,1.4413222974],
+    ["Voves",48.273809,1.614485024]
+  ];
+
+  function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const toRad = deg => deg * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  const layerCommunes = L.layerGroup().addTo(map);
+  const layerSites = L.layerGroup().addTo(map);
+  const layerDistances = L.layerGroup().addTo(map);
+
+  dechetteries.forEach(site => {
+    const [nom, lat, lon, tel] = site;
+    const googleLink = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
+
+    L.circleMarker([lat, lon], {
+      radius: 8,
+      color: "#b91c1c",
+      weight: 2,
+      fillColor: "#ef4444",
+      fillOpacity: 0.95
+    }).addTo(layerSites).bindPopup(`
+      <div style="min-width:220px;">
+        <b>${nom}</b><br>
+        📞 ${tel}<br>
+        📍 ${lat}, ${lon}<br>
+        <a class="popup-btn" href="${googleLink}" target="_blank">🚗 Y aller</a>
+      </div>
+    `);
+
+    L.marker([lat, lon], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div class="site-label">${nom}</div>`,
+        iconSize: [0, 0],
+        iconAnchor: [-10, 0]
+      })
+    }).addTo(layerSites);
+  });
+
+  communes.forEach(commune => {
+    const [nom, lat, lon] = commune;
+
+    let nearest = dechetteries[0];
+    let minDist = Infinity;
+
+    dechetteries.forEach(site => {
+      const d = haversineKm(lat, lon, site[1], site[2]);
+      if (d < minDist) {
+        minDist = d;
+        nearest = site;
+      }
+    });
+
+    L.circleMarker([lat, lon], {
+      radius: 6,
+      color: "#1d4ed8",
+      weight: 2,
+      fillColor: "#2563eb",
+      fillOpacity: 0.95
+    }).addTo(layerCommunes).bindPopup(`
+      <b>${nom}</b><br>
+      Déchetterie la plus proche : <b>${nearest[0]}</b><br>
+      Distance : <b>${minDist.toFixed(1)} km</b>
+    `);
+
+    L.marker([lat, lon], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div class="commune-label" style="margin-left:-68px;">${nom}</div>`,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0]
+      })
+    }).addTo(layerCommunes);
+
+    L.marker([lat, lon], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div class="distance-label" style="margin-left:18px;">${minDist.toFixed(1)} km</div>`,
+        iconSize: [0, 0],
+        iconAnchor: [0, 0]
+      })
+    }).addTo(layerDistances);
+  });
+
+  document.getElementById('toggleCommunes').addEventListener('change', function () {
+    if (this.checked) map.addLayer(layerCommunes);
+    else map.removeLayer(layerCommunes);
+  });
+
+  document.getElementById('toggleSites').addEventListener('change', function () {
+    if (this.checked) map.addLayer(layerSites);
+    else map.removeLayer(layerSites);
+  });
+
+  document.getElementById('toggleDistances').addEventListener('change', function () {
+    if (this.checked) map.addLayer(layerDistances);
+    else map.removeLayer(layerDistances);
+  });
+</script>
+
+</body>
+</html>
